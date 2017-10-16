@@ -1,0 +1,514 @@
+---
+title: "Assignment 2"
+author: "Yuqiang Wang & Zhenqiang Xu & Yuriy A Podvysotskiy"
+date: "2017/9/22"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# HW2
+# Author: YUW99 & ZHX31 & YAP7
+
+# Task 1
+
+**response variable: TARGET_Adjusted and RISK_Adjustment**
+  
+  
+**predictors: the other features(Age,Employment,Education,Marital,Occupation,Income,Gender,Deductions,Hours,ID)**
+
+# Task 2
+Explore the dataset, and generate both statistical and graphical summary with respect to the numerical and categorical variables. Provide analysis similar to HW1 (2b)–(2e)..
+
+### (a) Summary Table
+```{r}
+#dataset path
+audit <- "/Users/zhenqiang/Downloads/audit.csv"
+#load the dataset
+dataset <- read.csv(audit,1,stringsAsFactors = FALSE)
+summary(dataset)
+```
+  
+    From the dataset summary, we found out seven numerical variables include 'ID','Age','Income','Deductions','Hours', 'RISK_Adjustment', and 'TARGET_Adjusted'. And five categorical vairables include Employment, Education, Marital, and Gender.
+  
+```{r}
+#check misssing value
+apply(is.na(dataset),2,sum)
+```
+
+```{r}
+#Remove the row that contains missing values
+dataset<-dataset[complete.cases(dataset), ]
+apply(is.na(dataset),2,sum)
+```
+  
+```{r}
+numericalDF <- data.frame("Age"=dataset$Age,"Income"=dataset$Income,"Deductions"=dataset$Deductions,"Hours"=dataset$Hours, "RISK_Adjustment"=dataset$RISK_Adjustment,"TARGET_Adjusted"=dataset$TARGET_Adjusted)
+#install.packages("fBasics")
+library(fBasics)
+basicStats(numericalDF)[c("Minimum","Maximum","Mean","Median","1. Quartile","3. Quartile","Stdev"),]
+```
+
+### (b) Density Distribution
+
+```{r}
+library(ggplot2)
+library(e1071)
+shapiro.test(numericalDF$Age)
+skewness(numericalDF$Age)
+ggplot(numericalDF, aes(x = Age)) + geom_density() + labs(title = "Age Density Distribution")
+```
+```{r}
+shapiro.test(numericalDF$Income)
+skewness(numericalDF$Income)
+ggplot(numericalDF, aes(x = Income)) + geom_density() + labs(title = "Income Density Distribution")
+```
+```{r}
+shapiro.test(numericalDF$Deductions)
+skewness(numericalDF$Deductions)
+ggplot(numericalDF, aes(x = Deductions)) + geom_density() + labs(title = "Deductions Density Distribution")
+```
+```{r}
+shapiro.test(numericalDF$Hours)
+skewness(numericalDF$Hours)
+ggplot(numericalDF, aes(x = Hours)) + geom_density() + labs(title = "Hours Density Distribution")
+```
+```{r}
+shapiro.test(numericalDF$RISK_Adjustment)
+skewness(numericalDF$RISK_Adjustment)
+ggplot(numericalDF, aes(x = RISK_Adjustment)) + geom_density() + labs(title = "RISK_ADJUSTMENT Density Distribution")
+```
+```{r}
+shapiro.test(numericalDF$TARGET_Adjusted)
+skewness(numericalDF$TARGET_Adjusted)
+ggplot(numericalDF, aes(x = TARGET_Adjusted)) + geom_density() + labs(title = "TARGET_ADJUSTED Density Distribution")
+```
+    For normal distribution, we used shapiro.test function to test p-value. If p-value is larger than 0.05 that means the variable is normal distribution. For skew distribution, we used skewness function to test the positive or negative result to determine left skew distribution or right skew distribution. Meanwhile, we also can distinguish normal and skew distribution by the graphic analysis. 
+    As a result, the variables: Age, Income, Dectuctions, Hours, and RISK_Adjustment are right skew distribution. Target_Adjusted is neither normal distribution nor skew distribution.
+
+### (c) Conditional Histogram
+
+### Plot Conditional Histogram for Target_Adjusted Response Variable with Categorical Variable
+
+```{r}
+ggplot(data = dataset, aes(x = TARGET_Adjusted)) + geom_bar(data=subset(dataset,TARGET_Adjusted==0),fill="red") +geom_bar(data=subset(dataset,TARGET_Adjusted==1),fill="blue")+ facet_wrap(~Employment,nrow = 1)
+```
+```{r}
+ggplot(data = dataset, aes(x = TARGET_Adjusted)) + geom_bar(data=subset(dataset,TARGET_Adjusted==0),fill="red") +geom_bar(data=subset(dataset,TARGET_Adjusted==1),fill="blue")+ facet_wrap(~Education,nrow = 2)
+```
+```{r}
+ggplot(data = dataset, aes(x = TARGET_Adjusted)) + geom_bar(data=subset(dataset,TARGET_Adjusted==0),fill="red") +geom_bar(data=subset(dataset,TARGET_Adjusted==1),fill="blue")+ facet_wrap(~Marital,nrow = 1)
+```
+```{r}
+ggplot(data = dataset, aes(x = TARGET_Adjusted)) + geom_bar(data=subset(dataset,TARGET_Adjusted==0),fill="red") +geom_bar(data=subset(dataset,TARGET_Adjusted==1),fill="blue")+ facet_wrap(~Occupation,nrow = 2)
+```
+```{r}
+ggplot(data = dataset, aes(x = TARGET_Adjusted)) + geom_bar(data=subset(dataset,TARGET_Adjusted==0),fill="red") +geom_bar(data=subset(dataset,TARGET_Adjusted==1),fill="blue")+ facet_wrap(~Gender,nrow = 1)
+```
+
+### Plot Conditional Histogram for Risk_Adjustment Response Variable with Categorical Variable
+
+```{r}
+ggplot(data = dataset, aes(x = RISK_Adjustment)) + geom_histogram(binwidth = 5000)+ facet_wrap(~Employment,nrow = 2)
+```
+```{r}
+ggplot(data = dataset, aes(x = RISK_Adjustment)) + geom_histogram(binwidth = 5000)+ facet_wrap(~Education,nrow = 4)
+```
+```{r}
+ggplot(data = dataset, aes(x = RISK_Adjustment)) + geom_histogram(binwidth = 5000)+ facet_wrap(~Marital,nrow = 2)
+```
+```{r}
+ggplot(data = dataset, aes(x = RISK_Adjustment)) + geom_histogram(binwidth = 5000)+ facet_wrap(~Occupation,nrow = 4)
+```
+```{r}
+ggplot(data = dataset, aes(x = RISK_Adjustment)) + geom_histogram(binwidth = 5000)+ facet_wrap(~Gender,nrow = 1)
+```
+
+# Task 3
+Apply logistic regression analysis to predict TARGET_Adjusted. Evaluate the models through cross-validation and on holdout samples. Interpret the effect of the predictors.  
+
+--a) Implement a 10-fold cross-validation scheme by splitting the data into training and testing sets. Use the training set to train a logistic regressionmodeltopredicttheresponsevariable.Examinethe performance of different models by varying the number of predictors. Report the performance of the models on testing set using proper measures (accuracy, precision, recall, F1, AUC) and plots (ROC, lift).  
+
+--b) For the best model, compute the odds ratio and interpret the effect of each predictors.
+
+```{r}
+'Q3 - Logistic model'
+'--------------------------------------'
+rm(list=ls())
+# setwd("/Users/zhenqiang/Downloads/audit.csv")
+audit<- read.csv2("/Users/zhenqiang/Downloads/audit.csv", sep=",", dec=".")
+
+audit<-audit[complete.cases(audit), ]# delete the NA values
+rownames(audit)<-1:nrow(audit)# rename rownames
+
+# delete two special data
+audit <- audit[-62,]
+rownames(audit)<-1:nrow(audit)# rename rownames
+
+audit <- audit[-931,]
+
+```
+
+```{r}
+
+audit[1:3,]
+summary(audit)
+summary(audit$Occupation[is.na(audit$Employment)])
+
+'NAs available for: Employment and Occupation. These are unemployed'
+
+mm1<-glm(TARGET_Adjusted~Age+Employment+Education+Marital+Occupation+Income+Gender+Deductions+Hours,
+        family=binomial(link="logit"),data=audit)
+summary(mm1)
+
+mm2 <- glm(TARGET_Adjusted~Age+Education+Marital+Occupation+Income+Deductions+Hours,
+          family=binomial(link="logit"),data=audit)
+
+mm3 <- glm(TARGET_Adjusted~log(Age)+Education+Marital+Occupation+log(Income)+Deductions+log(Hours),
+          family=binomial(link="logit"),data=audit)
+
+'(*) Estimating and initial performance analysis:'
+
+'Split into training and testing:'
+audit1<-audit
+audit1$RISK_Adjustment<- NULL
+
+audit2<-audit1
+audit2$Employment <-NULL
+audit2$Gender <-NULL
+
+audit3<-audit2
+audit3$Age <- log(audit2$Age)
+audit3$Income <- log(audit2$Income)
+audit3$Hours <- log(audit2$Hours)
+
+audit1[1:3,]
+audit2[1:3,]
+audit3[1:3,]
+
+n.total = length(audit1$ID)
+n.total
+n.train =floor(n.total*0.8)
+n.train
+n.test=n.total - n.train
+
+Xaudit1 <- audit1[,c(2:10)]
+Xaudit2 <- audit2[,c(2:8)]
+Xaudit3 <- audit3[,c(2:8)]
+
+train=sample(1:n.total, n.train)  
+xtrain1 = Xaudit1[train,]
+xtrain2 = Xaudit2[train,]
+xtrain3 = Xaudit3[train,]
+
+xtest1 = Xaudit1[-train,]
+xtest2 = Xaudit2[-train,]
+xtest3 = Xaudit3[-train,]
+
+ytrain = audit$TARGET_Adjusted[train]
+ytest = audit$TARGET_Adjusted[-train]
+m1<- glm(TARGET~., family=binomial,data=data.frame(TARGET=ytrain,xtrain1))
+m2<- glm(TARGET~., family=binomial,data=data.frame(TARGET=ytrain,xtrain2))
+m3<- glm(TARGET~., family=binomial,data=data.frame(TARGET=ytrain,xtrain3))
+
+ptest1 = predict(m1, newdata = data.frame(xtest1), type="response")
+ptest2 = predict(m2, newdata = data.frame(xtest2), type="response")
+ptest3 = predict(m3, newdata = data.frame(xtest3), type="response")
+
+'for m1:'
+'------------'
+df1=cbind(ptest1,ytest)
+rank.df1=as.data.frame(df1[order(ptest1,decreasing=TRUE),])
+colnames(rank.df1) = c('predicted','actual')
+
+rank.df1[1:20,]
+baserate=mean(ytest)
+ax=dim(n.test)
+ay.base=dim(n.test)
+ay.pred=dim(n.test)
+ax[1]=1
+ay.base[1]=baserate
+ay.pred[1]=rank.df1$actual[1]
+for (i in 2:n.test) {
+  ax[i]=i
+  ay.base[i]=baserate*i ## uniformly increase with rate xbar
+  ay.pred[i]=ay.pred[i-1]+rank.df1$actual[i]
+}
+
+df=cbind(rank.df1,ay.pred,ay.base)
+plot(ax,ay.pred,xlab="number of cases",ylab="number of successes",main="Lift: Cum successes sorted by pred val/success prob")
+points(ax,ay.base,type="l")
+
+'for m2:'
+'------------'
+df2=cbind(ptest2,ytest)
+rank.df2=as.data.frame(df2[order(ptest2,decreasing=TRUE),])
+colnames(rank.df2) = c('predicted','actual')
+
+baserate=mean(ytest)
+ax=dim(n.test)
+ay.base=dim(n.test)
+ay.pred=dim(n.test)
+ax[1]=1
+ay.base[1]=baserate
+ay.pred[1]=rank.df2$actual[1]
+for (i in 2:n.test) {
+  ax[i]=i
+  ay.base[i]=baserate*i ## uniformly increase with rate xbar
+  ay.pred[i]=ay.pred[i-1]+rank.df2$actual[i]
+}
+
+df=cbind(rank.df2,ay.pred,ay.base)
+plot(ax,ay.pred,xlab="number of cases",ylab="number of successes",main="Lift: Cum successes sorted by pred val/success prob")
+points(ax,ay.base,type="l")
+
+
+'for m3:'
+'------------'
+df3=cbind(ptest3,ytest)
+rank.df3=as.data.frame(df3[order(ptest3,decreasing=TRUE),])
+colnames(rank.df3) = c('predicted','actual')
+
+baserate=mean(ytest)
+ax=dim(n.test)
+ay.base=dim(n.test)
+ay.pred=dim(n.test)
+ax[1]=1
+ay.base[1]=baserate
+ay.pred[1]=rank.df3$actual[1]
+for (i in 2:n.test) {
+  ax[i]=i
+  ay.base[i]=baserate*i ## uniformly increase with rate xbar
+  ay.pred[i]=ay.pred[i-1]+rank.df3$actual[i]
+}
+
+df=cbind(rank.df3,ay.pred,ay.base)
+plot(ax,ay.pred,xlab="number of cases",ylab="number of successes",main="Lift: Cum successes sorted by pred val/success prob")
+points(ax,ay.base,type="l")
+'----------------------end of (*)---------------------'
+
+```
+Three models were considered for the assessment. Where: 
+- Model 1 included all variables (not including RISK_Adjustment) as the relevant independent variables. 
+- Model 2 included only those independent variables (attributes) that were statistically significant in model 1. 
+- Model 3 was based on model 2, but such variables as Age, Income, and Hours were used in logarithms. 
+
+Three models have similar performance based on the frequency of correct classification of cases. The probability of p=0.5 was used for classification. Probably, alternative probability could cause better performance. 
+
+
+
+```{r}
+
+'(a): 10-Fold cross-validation scheme' 
+'--------------------------------------------------'
+
+'Split into training and testing:'
+set.seed(100)
+n.total = length(audit1$ID)
+n.total
+n.train =floor(n.total*0.9)
+n.train
+n.test=n.total - n.train
+  
+Xaudit1 <- audit1[,c(2:10)]
+Xaudit2 <- audit2[,c(2:8)]
+Xaudit3 <- audit3[,c(2:8)]
+
+Xaudit1[1:3,1:3]
+Xaudit2[1:3,1:3]
+Xaudit3[1:3,1:3]
+
+error1 <-c()
+error2 <-c()
+error3 <-c()
+
+for(i in 1:10)  
+{
+  train=sample(1:n.total, n.train)  
+  xtrain1 = Xaudit1[train,]
+  xtrain2 = Xaudit2[train,]
+  xtrain3 = Xaudit3[train,]
+  
+  xtest1 = Xaudit1[-train,]
+  xtest2 = Xaudit2[-train,]
+  xtest3 = Xaudit3[-train,]
+  
+  ytrain = audit$TARGET_Adjusted[train]
+  ytest = audit$TARGET_Adjusted[-train]
+  m1<- glm(TARGET~., family=binomial,data=data.frame(TARGET=ytrain,xtrain1))
+  m2<- glm(TARGET~., family=binomial,data=data.frame(TARGET=ytrain,xtrain2))
+  m3<- glm(TARGET~., family=binomial,data=data.frame(TARGET=ytrain,xtrain3))
+
+  ptest1 = predict(m1, newdata = data.frame(xtest1), type="response")
+  ptest2 = predict(m2, newdata = data.frame(xtest2), type="response")
+  ptest3 = predict(m3, newdata = data.frame(xtest3), type="response")
+
+  btest1 = floor(ptest1 + 0.5)
+  btest2 = floor(ptest2 + 0.5)
+  btest3 = floor(ptest3 + 0.5)
+  
+  conf.mat1 = table(ytest,btest1)
+  conf.mat2 = table(ytest,btest2)
+  conf.mat3 = table(ytest,btest3)
+  
+  error1[i] = (conf.mat1[1,2]+conf.mat1[2,1])/n.test
+  error2[i] = (conf.mat2[1,2]+conf.mat2[2,1])/n.test
+  error3[i] = (conf.mat3[1,2]+conf.mat3[2,1])/n.test
+    
+}
+
+mean(error1)
+mean(error2)
+mean(error3)
+
+```
+The 10-Fold cross-validation was implemented by obtaining 10 random training and test samples (K = 10) from the database. The split between training and test samples was 9:1. Each of the three considered models was estimated with each of K training samples and tested with K testing samples.
+
+The obtained K = 10 errors were computed for each of three models. The mean errors are summarised as follows:  
+
+M1:0.1642105
+M2:0.1621053
+M3:0.1605263  
+
+Therefore, model M3 provides the highest performance. Also, taking logarithms of numerical variables, in this case, does not add to the performance of the model. 
+
+```{r}
+'(b): Odds ratio + Interpretation'
+'--------------------------------------------------'
+
+
+mm2 <- glm(TARGET_Adjusted~Age+Education+Marital+Occupation+Income+Deductions+Hours,
+           family=binomial(link="logit"),data=audit)
+summary(mm2)
+
+'Coefficients'
+c1=mm2$coefficients['Age']
+c2=mm2$coefficients['EducationCollege']
+c3=mm2$coefficients['EducationHSgrad']
+c4=mm2$coefficients['EducationProfessional']
+c5=mm2$coefficients['MaritalMarried']
+c6=mm2$coefficients['Deductions']
+c7=mm2$coefficients['Hours']
+
+C=c(c1,c2,c3,c4,c5,c6,c7)
+  
+
+'Odds ratios:'
+o1=exp(mm2$coefficients['Age'])
+o2=exp(mm2$coefficients['EducationCollege'])
+o3=exp(mm2$coefficients['EducationHSgrad'])
+o4=exp(mm2$coefficients['EducationProfessional'])
+o5=exp(mm2$coefficients['MaritalMarried'])
+o6=exp(mm2$coefficients['Deductions'])
+o7=exp(mm2$coefficients['Hours'])
+
+O=c(o1,o2,o3,o4,o5,o6,o7)
+
+for(i in 1:7){
+  print(C[i])
+  print(O[i])
+  }
+
+
+'------------------------Q3 end--------------------------'
+```
+
+Some key odds ratios:
+Increase in age by a year increases probability of adjustment by 2.78% (=1.027 - 1);
+
+For those with college education, probability of adjustment is lower by 54% (=1-0.455);
+
+For those graduated with honours, probability of adjustment is lower by 65% (=1-0.35). 
+
+# Task 4
+Apply linear and non-linear regression analysis to predict RISK_Adjustment. Evaluate the models through cross-validation and on holdout (leave-one-out or 10-fold cross-validation) samples. Provide details similar to HW1 (3).
+
+```{r}
+dataset_audit<-read.csv("/Users/zhenqiang/Downloads/audit.csv",sep=",",header=TRUE)
+
+# head(dataset_audit,100)
+apply(is.na(dataset_audit),2,sum)# find NA values
+
+dataset_audit<-dataset_audit[complete.cases(dataset_audit), ]# delete the NA values
+rownames(dataset_audit)<-1:nrow(dataset_audit)# rename rownames
+
+```
+
+```{r}
+apply(is.na(dataset_audit),2,sum)# check NA values
+
+```
+
+```{r}
+# delete useless features(ID and Target_Adjusted)
+dataset_audit<-dataset_audit[,-1]
+dataset_audit<-dataset_audit[,-11]
+
+# head(dataset_audit,100)
+
+```
+
+```{r}
+# linear regression model
+fit <- lm(dataset_audit$RISK_Adjustment~., dataset_audit)
+summary(fit)
+
+k <- 0
+
+# LOO-CV function
+looCV <- function(x){
+  n <- length(dataset_audit$RISK_Adjustment)
+  error <- dim(n)
+  for(k in 1:n && k != 62){
+    # data which row equals 62 has a unique value in Employment. Thus this data cannot be the testing-set.
+    train1 <- c(1:n)
+    train <- train1[train1 != k] # pick elements that are different with k
+    m2 <- lm(x,data = dataset_audit[train,])
+    pred <- predict(m2, newdata = dataset_audit[-train,])
+    obs <- dataset_audit$RISK_Adjustment[-train]
+    error[k] <- obs-pred
+  }
+me <- mean(error) # mean error
+rmse <- sqrt(mean(error^2))
+return(rmse) # root mean square error (out-of-sample)
+}
+
+# use all features
+combine1 <- RISK_Adjustment~.
+looCV(combine1)
+
+# use important features
+combine2 <- RISK_Adjustment~Hours+Employment+Education+Marital
+looCV(combine2)
+
+# use important features and not very important features
+combine3 <- RISK_Adjustment~Hours+Employment+Education+Marital+Deductions+Occupation+Age
+looCV(combine3)
+
+```
+    According to summary(fit), I split features into three parts by P value: important features(Hours+Employment+Education+Marital), not very important features(Deductions+Occupation+Age) and useless features(the other features). Then I use all features, important features and both important features and not very important features respectively to train the linear model through leave one out cross validation. The result (rmse) shows that using both important features and not very important features to train the model is the best way for linear model.**(the rmse of using all features is 1185.939; the rmse of using important features is 1137.087; the rmse of using important features and not very important features is 1104.591)**
+    
+```{r}
+# non-linear regression model
+poly.fit <- lm(RISK_Adjustment~poly(Age,4)+Employment+Education+Marital+Occupation+poly(Income,1)+Gender+poly(Deductions,3)+poly(Hours,1),dataset_audit)
+summary(poly.fit)
+
+# use all features
+combine4 <- RISK_Adjustment~poly(Age,4)+Employment+Education+Marital+Occupation+poly(Income,1)+Gender+poly(Deductions,3)+poly(Hours,1)
+looCV(combine4)
+
+# use important features
+combine5 <- RISK_Adjustment~poly(Age,4)+Employment+Education+Marital+Occupation+poly(Deductions,3)
+looCV(combine5)
+
+```
+    According to summary(poly.fit), I select some important features by P value: Employment Education Marital Occupation poly(Deductions,3) and poly(Age,4). Then I use all features and important features respectively to train the non-linear model through leave one out cross validation. The result (rmse) shows that using important features to train the model is the best way.**(the rmse of using all features is 1148.218; the rmse of using important features is 225.6285)**
+    
+### Summary
+    In conclusion, the best model for this task is non-linear model with Employment Education Marital Occupation poly(Deductions,3) and poly(Age,4) features training the model (**has lowest rmse value 225.6285**), which also underlines the importance of the feature selection.
+
+
