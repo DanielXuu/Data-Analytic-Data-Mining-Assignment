@@ -1,0 +1,258 @@
+---
+title: "Assignment 8"
+output: html_notebook
+---
+
+## Group Members: Zhenqiang Xu, Yuqiang Wang
+
+### Task1
+We split the data based on users and keep all talks. Since some users just saw one or two talks, we just take user_id equal to 1 for example.
+```{r}
+library(tm)
+library(SnowballC)
+library(wordcloud)
+library(sqldf)
+library(rpart)
+library(text2vec)
+library(caret)
+library(pROC)
+library(arules)
+library(arulesViz)
+library(NMF)
+```
+
+#### deal with data
+
+```{r}
+T1 <- read.csv("/Users/wangyuqiang/Documents/infsci2725-fall-2016/class-11/train_user_view.csv",  header = T)
+T2 <- read.csv("/Users/wangyuqiang/Documents/infsci2725-fall-2016/class-11/train_talk.csv",  header = T)
+
+str(T1, list.len=5)
+str(T2, list.len=5)
+```
+User whose user_id equal to 1 saw 126 talks.
+```{r}
+T1_1 <- T1[1:126,]
+
+T3 <- sqldf("select * from T1_1,T2 where T1_1.talk_id = T2.talk_id")
+textual <- paste(T3$title, T3$detail, sep =" ")
+T3 <- T3[,c(-3:-25)]
+T3 <- cbind(T3[,1:2],textual)
+
+str(T3, list.len=5)
+
+set.seed(7)
+idx <- sample(nrow(T3),nrow(T3)*0.80)
+T3train = T3[idx,]
+T3test = T3[-idx,]
+```
+
+#### TF-IDF Model
+
+```{r}
+T_corpus = Corpus(VectorSource(T3$textual))
+
+T_corpus = tm_map(T_corpus, content_transformer(tolower))
+T_corpus = tm_map(T_corpus, removeNumbers)
+T_corpus = tm_map(T_corpus, removePunctuation)
+T_corpus = tm_map(T_corpus, removeWords, c("the", "and", stopwords("english")))
+T_corpus = tm_map(T_corpus, stripWhitespace)
+
+T_dtm_tfidf <- DocumentTermMatrix(T_corpus, control = list(weighting = weightTfIdf))
+T2_dtm_tfidf = removeSparseTerms(T_dtm_tfidf, 0.95)
+
+set.seed(41)
+freq = data.frame(sort(colSums(as.matrix(T2_dtm_tfidf)), decreasing=TRUE))
+wordcloud(rownames(freq), freq[,1], max.words=50, colors=brewer.pal(3, "Greens"))
+```
+
+```{r}
+T2_1 = cbind(T3, as.matrix(T2_dtm_tfidf))
+T2_1$user_id = NULL
+T2_1$textual = NULL
+
+set.seed(4)
+idx2 <- sample(nrow(T2_1),nrow(T2_1)*0.80)
+T2_1train = T2_1[idx2,]
+T2_1test = T2_1[-idx2,]
+
+tree_1 = rpart(T2_1train$talk_id~.,  method = "class", data = T2_1train)  
+pred_1 = predict(tree_1, T2_1test,  type="class")
+
+1 - mean(T2_1test$talk_id != pred_1)
+```
+
+#### Word Embedding Model
+
+```{r}
+prep_fun = tolower
+tok_fun = word_tokenizer
+
+train_tokens = T3train$textual %>%
+  prep_fun %>% 
+  tok_fun
+
+it_train = itoken(train_tokens, progressbar = FALSE)
+
+vocab = create_vocabulary(it_train)
+vocab
+
+vectorizer = vocab_vectorizer(vocab)
+dtm_train = create_dtm(it_train, vectorizer)
+
+it_test = T3test$textual %>% 
+  prep_fun %>% 
+  tok_fun %>% 
+  itoken(progressbar = FALSE)
+
+dtm_test = create_dtm(it_test, vectorizer)
+
+Train_temp <- as(dtm_train,"matrix")
+Test_temp <- as(dtm_test,"matrix")
+
+T3_train <- cbind(Train_temp[,1:2149],T3train$talk_id)
+T3_test <- cbind(Test_temp[,1:2149],T3test$talk_id)
+
+T3_train <- as.data.frame(T3_train)
+T3_test <- as.data.frame(T3_test)
+```
+
+```{r}
+tree = rpart(T3_train$V2150~.,  method = "class", data = T3_train)  
+pred = predict(tree, T3_test,  type="class")
+1 - mean(T3_test$V2150 != pred)
+```
+
+```{r}
+tfidf = TfIdf$new()
+
+dtm_train_tfidf = fit_transform(dtm_train, tfidf)
+dtm_test_tfidf  = create_dtm(it_test, vectorizer) %>% 
+  transform(tfidf)
+
+Train_temp1 <- as(dtm_train_tfidf,"matrix")
+Test_temp1 <- as(dtm_test_tfidf,"matrix")
+
+T4_train <- cbind(Train_temp1[,1:2149],T3train$talk_id)
+T4_test <- cbind(Test_temp1[,1:2149],T3test$talk_id)
+
+T4_train <- as.data.frame(T4_train)
+T4_test <- as.data.frame(T4_test)
+```
+
+```{r}
+tree1 = rpart(T4_train$V2150~.,  method = "class", data = T4_train)  
+pred1 = predict(tree1, T4_test,  type="class")
+1 - mean(T4_test$V2150 != pred1)
+```
+
+### Task2
+
+```{r}
+```
+
+#### User-based/Item-based Collaborative Filtering
+
+```{r}
+S1_1 <- read.csv("/Users/wangyuqiang/Documents/infsci2725-fall-2016/class-11/train_user_view1.csv",  header = F)
+str(S1_1, list.len=5)
+
+S1 <- read.transactions('/Users/wangyuqiang/Documents/infsci2725-fall-2016/class-11/train_user_view1.csv', format = 'basket', sep = ',') 
+
+S1
+summary(S1)
+itemFrequencyPlot(S1, topN = 20, type = "absolute")
+```
+
+```{r}
+rules <- apriori(S1, parameter = list(conf = 0.8))
+rules <- sort(rules, by = "confidence", decreasing = TRUE)
+```
+
+```{r}
+S_T <- S1_1[16,]
+S_T <- S_T[,-3:-235]
+S_T <- as.data.frame(sapply(S_T, as.factor))
+s_test <- as.vector(t(S_T))
+rulesMatch <- subset(rules, lhs %ain% s_test)
+rulesMatch
+detach(package:tm, unload=TRUE)
+inspect(head(rulesMatch))
+```
+From the result, there are 5020 rules show that user who saw 10662 also saw 10564. And the confidence is 1. So we can recommend 10662(10564) to someone who saw 10564(10662).
+
+#### Matrix Factorization
+
+```{r}
+mm <- t(as(S1,"ngCMatrix"))
+xx <- as(mm,"matrix")
+cc <- as.data.frame(xx)
+cc <- as.data.frame(sapply(cc, as.numeric))
+
+set.seed(12345)
+
+res <- nmf(cc, 4,"lee")
+
+V.hat <- fitted(res) 
+print(V.hat)
+
+w <- basis(res)
+dim(w)
+print(w) 
+
+h <- coef(res)
+dim(h)
+print(h) 
+
+topic <- data.frame(t(h))
+features <- cbind(topic$X1,topic$X2)
+plot(features)
+```
+
+### Task3
+
+```{r}
+names(getModelInfo())
+```
+
+```{r}
+T2_2 <- sqldf("select * from T1_1,T2 where T1_1.talk_id = T2.talk_id")
+T2_2 <- T2_2[,c(-3:-9,-13:-25)]
+T2_2 = cbind(T2_2, T2_1)
+T2_2 <- T2_2[,-2]
+T2_2$user_id = NULL
+
+set.seed(1234)
+t22 <- T2_2[sample(nrow(T2_2)),]
+split <- floor(nrow(t22)/3)
+endata <- t22[0:split,]
+bldata <- t22[(split+1):(split*2),]
+tedata <- t22[(split*2+1):nrow(t22),]
+
+labelname <- 'talk_id'
+predictors <- names(endata)[names(endata) != labelname]
+
+mycontrol <- trainControl(method = 'cv', number = 3, repeats = 1, returnResamp = 'none')
+
+model_knn <- train(endata[,predictors], endata[,labelname], method = 'knn', trControl = mycontrol)
+model_rpart <- train(endata[,predictors], endata[,labelname], method = 'rpart', trControl = mycontrol)
+model_treebag <- train(endata[,predictors], endata[,labelname], method = 'treebag', trControl = mycontrol)
+
+bldata$knn_PROB <- predict(object = model_knn, bldata[,predictors])
+bldata$rf_PROB <- predict(object = model_rpart, bldata[,predictors])
+bldata$treebag_PROB <- predict(object = model_treebag, bldata[,predictors])
+
+tedata$knn_PROB <- predict(object = model_knn, tedata[,predictors])
+tedata$rf_PROB <- predict(object = model_rpart, tedata[,predictors])
+tedata$treebag_PROB <- predict(object = model_rpart, tedata[,predictors])
+
+library(pROC)
+
+predictors <- names(bldata)[names(bldata) != labelname]
+final_bl_model <- train(bldata[,predictors], bldata[,labelname], method = 'knn', trControl = mycontrol)
+
+preds_s <- predict(object = final_bl_model, tedata[,predictors])
+auc <- roc(tedata[,labelname], preds_s)
+auc
+```
+Our final accruate is 0.5.
